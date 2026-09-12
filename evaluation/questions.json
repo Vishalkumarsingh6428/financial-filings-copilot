@@ -1,0 +1,14 @@
+[
+  {"id": "q1", "question": "What was Apple's total net sales in fiscal 2023?", "expected_ticker": "AAPL", "expected_item": "8"},
+  {"id": "q2", "question": "What supply chain risks does Apple disclose?", "expected_ticker": "AAPL", "expected_item": "1A"},
+  {"id": "q3", "question": "What did Apple say about its cloud services business?", "expected_ticker": "AAPL", "expected_item": "1"},
+  {"id": "q4", "question": "How did Apple's Mac net sales change in fiscal 2023?", "expected_ticker": "AAPL", "expected_item": "7"},
+  {"id": "q5", "question": "What business segments does Microsoft operate?", "expected_ticker": "MSFT", "expected_item": "1"},
+  {"id": "q6", "question": "What properties does NVIDIA own or lease?", "expected_ticker": "NVDA", "expected_item": "2"},
+  {"id": "q7", "question": "What risk factors does Tesla disclose about its business?", "expected_ticker": "TSLA", "expected_item": "1A"},
+  {"id": "q8", "question": "What is JPMorgan's business overview?", "expected_ticker": "JPM", "expected_item": "1"},
+  {"id": "q9", "question": "What risk factors does Goldman Sachs disclose?", "expected_ticker": "GS", "expected_item": "1A"},
+  {"id": "q10", "question": "What risk factors does American Express disclose?", "expected_ticker": "AXP", "expected_item": "1A"},
+  {"id": "q11", "question": "What controls and procedures does Amazon describe?", "expected_ticker": "AMZN", "expected_item": "9A", "expected_filing_type": "10-K"},
+  {"id": "q12", "question": "What does Meta's MD&A say about its financial results?", "expected_ticker": "META", "expected_item": "7"}
+]

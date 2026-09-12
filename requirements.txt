@@ -1,0 +1,17 @@
+# requirements.txt
+sec-edgar-downloader
+langchain
+langchain-openai
+langchain-pinecone
+langgraph
+pinecone
+python-dotenv
+beautifulsoup4
+langchain-huggingface
+sentence-transformers
+langchain-groq
+langchain-community
+rank_bm25
+fastapi
+uvicorn
+gradio
