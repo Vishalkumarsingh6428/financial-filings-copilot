@@ -2,7 +2,7 @@
 sec-edgar-downloader
 langchain
 langchain-openai
-langchain-pinecone
+langchain-pinecone>=0.2.13
 langgraph
 pinecone
 python-dotenv
