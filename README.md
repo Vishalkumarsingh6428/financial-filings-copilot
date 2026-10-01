@@ -10,7 +10,7 @@ The system is designed around a simple principle:
 
 > If the available evidence is insufficient, the system should not confidently invent an answer.
 
-`Python 3.12` · `LangChain` · `LangGraph` · `Pinecone` · `Groq` · `FastAPI` · `Gradio`
+`Python 3.12` · `LangChain` · `LangGraph` · `Pinecone` · `Groq` · `FastAPI` · `Streamlit`
 
 ---
 
@@ -34,71 +34,71 @@ FilingsIQ combines multiple retrieval and reasoning components:
 This makes the system a retrieval and decision pipeline, rather than a simple LLM wrapper.
 
 ## System Architecture
-```
-                     User Question
-                          │
-                          ▼
-              ┌──────────────────────┐
-              │   Hybrid Retrieval   │
-              │                      │
-              │  Dense Vector Search │
-              │          +           │
-              │      BM25 Search     │
-              └──────────┬───────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │ Reciprocal Rank      │
-              │ Fusion (RRF)         │
-              └──────────┬───────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │ Cross-Encoder        │
-              │ Reranking            │
-              │ 20 → Top 5           │
-              └──────────┬───────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │    grade_docs        │
-              │                      │
-              │ Is the retrieved     │
-              │ evidence sufficient? │
-              └──────────┬───────────┘
-                         │
-                ┌────────┴────────┐
-                │                 │
-             Relevant          Not Relevant
-                │                 │
-                │                 ▼
-                │          ┌───────────────┐
-                │          │ rewrite_query │
-                │          └───────┬───────┘
-                │                  │
-                │                  └──► Retrieve
-                │
-                ▼
-         ┌─────────────────┐
-         │    Generate     │
-         │                 │
-         │ Answer +        │
-         │ Citations       │
-         └────────┬────────┘
-                  │
-                  ▼
-         ┌────────────────────┐
-         │ verify_citations   │
-         │                    │
-         │ Are the generated  │
-         │ claims supported   │
-         │ by the evidence?   │
-         └─────────┬──────────┘
-                   │
-                   ▼
-          Answer + Sources +
-         Verification Verdict
-```
+
+                 User Question
+                      │
+                      ▼
+          ┌──────────────────────┐
+          │   Hybrid Retrieval   │
+          │                      │
+          │  Dense Vector Search │
+          │          +           │
+          │      BM25 Search     │
+          └──────────┬───────────┘
+                     │
+                     ▼
+          ┌──────────────────────┐
+          │ Reciprocal Rank      │
+          │ Fusion (RRF)         │
+          └──────────┬───────────┘
+                     │
+                     ▼
+          ┌──────────────────────┐
+          │ Cross-Encoder        │
+          │ Reranking            │
+          │ 20 → Top 5           │
+          └──────────┬───────────┘
+                     │
+                     ▼
+          ┌──────────────────────┐
+          │    grade_docs        │
+          │                      │
+          │ Is the retrieved     │
+          │ evidence sufficient? │
+          └──────────┬───────────┘
+                     │
+            ┌────────┴────────┐
+            │                 │
+         Relevant          Not Relevant
+            │                 │
+            │                 ▼
+            │          ┌───────────────┐
+            │          │ rewrite_query │
+            │          └───────┬───────┘
+            │                  │
+            │                  └──► Retrieve
+            │
+            ▼
+     ┌─────────────────┐
+     │    Generate     │
+     │                 │
+     │ Answer +        │
+     │ Citations       │
+     └────────┬────────┘
+              │
+              ▼
+     ┌────────────────────┐
+     │ verify_citations   │
+     │                    │
+     │ Are the generated  │
+     │ claims supported   │
+     │ by the evidence?   │
+     └─────────┬──────────┘
+               │
+               ▼
+      Answer + Sources +
+     Verification Verdict
+    
 
 The retrieval retry loop is bounded to a maximum of two retries, preventing uncontrolled agentic loops.
 
@@ -130,6 +130,7 @@ retrieve → grade_docs → Relevant?
 ├── Yes → generate → verify → END
 └── No → rewrite_query → retrieve (max 2 retries)
 ```
+
 
 The retry mechanism is deliberately bounded to prevent the system from repeatedly rewriting queries without making progress.
 
@@ -178,6 +179,7 @@ SEC EDGAR → Raw Filing Download → HTML/Primary Document
 → Chunking → Embeddings → Pinecone
 ```
 
+
 The parser removes HTML and XBRL noise while preserving meaningful filing structure (Item 1 Business, Item 1A Risk Factors, Item 7 MD&A, Item 8 Financial Statements, etc.). Section-aware metadata is retained during chunking so retrieval can be filtered and evaluated at the filing-section level.
 
 ## Technology Stack
@@ -192,7 +194,7 @@ The parser removes HTML and XBRL noise while preserving meaningful filing struct
 | Embeddings | `all-MiniLM-L6-v2` | Local 384-dimensional embeddings |
 | LLM | Groq — `gpt-oss-120b` | Answer generation and grading |
 | API | FastAPI | Programmatic API access |
-| UI | Gradio | Interactive research interface |
+| UI | Streamlit | Interactive research interface, deployed on Streamlit Community Cloud |
 | Data Source | SEC EDGAR | Real 10-K / 10-Q filings |
 | Language | Python 3.12 | Application and pipeline |
 
@@ -217,7 +219,7 @@ The API returns the generated answer together with retrieved sources and the cit
 ```
 financial-filings-copilot/
 │
-├── app.py
+├── main.py
 │
 ├── app/
 │ ├── config.py
@@ -236,7 +238,7 @@ financial-filings-copilot/
 │ ├── api/
 │ │ └── main.py
 │ └── ui/
-│ └── gradio_app.py
+│ └── streamlit_app.py
 │
 ├── evaluation/
 │ ├── questions.json
@@ -248,9 +250,11 @@ financial-filings-copilot/
 │
 ├── requirements.txt
 ├── .env.example
+├── .python-version
 ├── .gitignore
 └── README.md
 ```
+
 
 ## Local Setup
 
@@ -276,6 +280,7 @@ PINECONE_API_KEY=your-pinecone-key
 GROQ_API_KEY=your-groq-key
 ```
 
+
 Never commit `.env` or API keys to GitHub.
 
 ## Build the Corpus
@@ -289,15 +294,23 @@ python -m app.retrieval.vectorstore   # generate embeddings and upload to Pineco
 
 ## Run the Application
 
-**Gradio UI**
+**Streamlit UI**
 ```bash
-python -m app.ui.gradio_app
+streamlit run app/ui/streamlit_app.py
 ```
 
 **FastAPI**
 ```bash
 python -m uvicorn app.api.main:app --reload --port 8000
 ```
+
+## Deployment
+
+The app is deployed on **Streamlit Community Cloud**, with `app/ui/streamlit_app.py` as the entry point and secrets (`PINECONE_API_KEY`, `GROQ_API_KEY`, `SEC_EDGAR_EMAIL`) configured via Streamlit's built-in secrets manager.
+
+Two earlier platforms were evaluated and ruled out for documented reasons:
+- **Hugging Face Spaces** — Gradio and Docker Spaces now require a paid PRO plan; only Static Spaces (which cannot run this app) are free.
+- **Render** — the free tier's 512MB memory limit was insufficient for the combined footprint of PyTorch, the embeddings model, the cross-encoder reranker, and an in-memory BM25 index over 33K+ chunks, causing the deploy to be killed with an out-of-memory error.
 
 ## Design Decisions
 
@@ -308,6 +321,8 @@ python -m uvicorn app.api.main:app --reload --port 8000
 **Why LangGraph?** The workflow contains real conditional decisions ("is the evidence relevant?") that determine whether to generate or retry. LangGraph makes this routing explicit and keeps state across nodes, rather than hand-chaining function calls.
 
 **Why section-aware parsing?** SEC filings are structured documents. A generic text splitter can destroy useful boundaries between Risk Factors, MD&A, Financial Statements, and Legal Proceedings. Preserving section metadata makes retrieval more meaningful and allows performance to be evaluated against expected filing sections.
+
+**Why Streamlit over Gradio?** The app was initially built with Gradio. Deployment attempts on Hugging Face Spaces and Render each hit real platform-specific blockers (paid-plan requirements and memory limits, respectively). Streamlit Community Cloud offers free hosting with a higher memory ceiling, and porting the UI required no changes to the underlying retrieval/graph logic.
 
 ## Known Limitations
 
@@ -335,8 +350,8 @@ API credentials are loaded through environment variables. The following should n
 - [x] Cross-encoder reranking
 - [x] Citation verification
 - [x] FastAPI API
-- [x] Gradio interface
-- [ ] Render deployment
+- [x] Streamlit interface
+- [x] Streamlit Community Cloud deployment
 - [ ] Multi-turn question contextualization
 - [ ] Claim-level citation alignment
 - [ ] Expanded evaluation benchmark
