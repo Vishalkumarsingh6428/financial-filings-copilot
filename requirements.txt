@@ -14,4 +14,4 @@ langchain-community
 rank_bm25
 fastapi
 uvicorn
-gradio
+streamlit
