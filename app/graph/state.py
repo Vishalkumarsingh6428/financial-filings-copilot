@@ -11,3 +11,4 @@ class ChatState(TypedDict):
     answer: Optional[str]                  # final generated answer
     citations: list[dict]                  # source metadata for the answer
     verification: Optional[dict]  
+    evidence_sufficient: Optional[bool]

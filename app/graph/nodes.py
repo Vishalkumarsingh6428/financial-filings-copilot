@@ -105,9 +105,14 @@ def generate(state: ChatState) -> dict:
                 "fiscal_year": d.metadata["fiscal_year"],
                 "item_number": d.metadata["item_number"],
                 "section_title": d.metadata["section_title"],
+                "excerpt": d.page_content[:220].strip() + ("..." if len(d.page_content) > 220 else ""),
             })
 
-    return {"answer": response, "citations": citations}
+    return {
+        "answer": response,
+        "citations": citations,
+        "evidence_sufficient": bool(state.get("docs_relevant")),
+    }
 
 VERIFY_PROMPT = """You are fact-checking a generated answer against source excerpts.
 
