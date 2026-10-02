@@ -59,6 +59,8 @@ with st.sidebar:
     st.divider()
     st.markdown("### Focus company (optional)")
     focus = st.selectbox("Narrow your question to one company", ["Any"] + sum(COMPANIES.values(), []))
+    st.divider()
+    st.caption("Built by Vishal Kumar Singh, IIT Madras")
 
 st.markdown('<div class="app-title">Financial Filings Copilot</div>', unsafe_allow_html=True)
 st.markdown(
@@ -185,3 +187,5 @@ if question:
         "retries_used": result["retry_count"],
         "elapsed": elapsed,
     })
+
+st.markdown('<div class="app-footer">Built by Vishal Kumar Singh, IIT Madras</div>', unsafe_allow_html=True)
