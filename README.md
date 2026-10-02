@@ -1,8 +1,10 @@
-# FilingsIQ
+# Financial Filings Copilot
 
 **Evidence-Grounded Agentic Intelligence for SEC Filings**
 
-FilingsIQ is an evidence-grounded, agentic RAG system for researching SEC filings such as 10-K and 10-Q reports.
+🔗 **Live app:** https://financial-filings-copilot.streamlit.app
+
+Financial Filings Copilot is an evidence-grounded, agentic RAG system for researching SEC filings such as 10-K and 10-Q reports.
 
 Unlike a basic "chat with PDF" application that performs a single retrieval followed by generation, FilingsIQ uses a LangGraph-based decision workflow that evaluates retrieval quality, retries weak retrieval, reranks candidate evidence, generates answers from retrieved excerpts, and performs a separate citation-verification pass.
 
@@ -14,13 +16,13 @@ The system is designed around a simple principle:
 
 ---
 
-## Why FilingsIQ?
+## Why Financial Filings Copilot?
 
 Financial filings contain large amounts of dense, structured information. Finding a specific answer often requires navigating hundreds of pages across annual and quarterly reports.
 
 Traditional keyword search can miss semantically related information, while vector-only retrieval can miss exact financial terminology.
 
-FilingsIQ combines multiple retrieval and reasoning components:
+Financial Filings Copilot combines multiple retrieval and reasoning components:
 
 - Dense vector retrieval for semantic similarity
 - BM25 keyword retrieval for exact financial terminology
@@ -100,6 +102,7 @@ This makes the system a retrieval and decision pipeline, rather than a simple LL
      Verification Verdict
     
 
+
 The retrieval retry loop is bounded to a maximum of two retries, preventing uncontrolled agentic loops.
 
 ## Retrieval Pipeline
@@ -108,23 +111,19 @@ The retrieval retry loop is bounded to a maximum of two retries, preventing unco
 
 Filing chunks are embedded using `sentence-transformers/all-MiniLM-L6-v2`. The resulting vectors are stored in Pinecone using cosine similarity.
 
-Dense retrieval helps identify passages that are semantically related to the user's question even when the exact wording differs.
-
 ### 2. BM25 Retrieval
 
-BM25 provides lexical retrieval based on exact terms appearing in the filing — particularly useful for financial research where exact terms matter: "contractual obligations," "internal controls," "market risk," "accounts receivable," "revenue recognition." BM25 complements dense retrieval by capturing these exact terms.
+BM25 provides lexical retrieval based on exact terms appearing in the filing — particularly useful for financial research where exact terms matter: "contractual obligations," "internal controls," "market risk," "accounts receivable," "revenue recognition."
 
 ### 3. Reciprocal Rank Fusion
 
-The dense and BM25 rankings are combined using Reciprocal Rank Fusion (RRF). Instead of directly comparing vector similarity scores with BM25 scores (which aren't on comparable scales), RRF combines their rankings — benefiting from both semantic similarity and exact keyword matching.
+The dense and BM25 rankings are combined using Reciprocal Rank Fusion (RRF), benefiting from both semantic similarity and exact keyword matching.
 
 ### 4. Cross-Encoder Reranking
 
-The hybrid retriever produces a candidate pool of 20 chunks. These are reranked using `cross-encoder/ms-marco-MiniLM-L-6-v2`, which evaluates the query and passage jointly rather than relying only on independent embeddings. The final top 5 chunks are passed to the downstream LangGraph workflow.
+The hybrid retriever produces a candidate pool of 20 chunks, reranked using `cross-encoder/ms-marco-MiniLM-L-6-v2`, which evaluates the query and passage jointly. The final top 5 chunks are passed to the downstream LangGraph workflow.
 
 ## Agentic Retrieval Workflow
-
-The system is implemented as a LangGraph `StateGraph` with conditional routing:
 ```
 retrieve → grade_docs → Relevant?
 ├── Yes → generate → verify → END
@@ -134,19 +133,16 @@ retrieve → grade_docs → Relevant?
 
 The retry mechanism is deliberately bounded to prevent the system from repeatedly rewriting queries without making progress.
 
+
 ## Citation Verification
 
-Generating an answer with citations is not enough — a retrieval system can still produce an unsupported statement while attaching a legitimate-looking source. FilingsIQ performs a separate LLM verification pass after answer generation, checking whether the answer's claims are actually supported by the retrieved excerpts.
+A separate LLM pass checks whether the generated answer's claims are actually supported by the retrieved excerpts — tested against a deliberately fabricated answer to confirm it discriminates rather than defaulting to "supported."
 
-The verifier was tested against a deliberately fabricated answer to confirm it could distinguish supported information from unsupported claims rather than simply returning SUPPORTED by default.
-
-**Important:** the current verifier evaluates whether the answer's claims are supported by the retrieved evidence *overall*. It does not guarantee that every individual inline citation marker is mapped to the exact sentence it supports.
+**Important:** verification evaluates the answer's claims *overall*; it does not guarantee exact sentence-to-citation alignment for every inline marker.
 
 ## Evaluation
 
-Rather than assuming hybrid retrieval and reranking improve performance, FilingsIQ evaluates each retrieval stage on a hand-built 12-question evaluation set covering technology and financial-services companies.
-
-**Metric:** Recall@5 — a question is counted as successful when a chunk from the expected filing section appears among the top 5 retrieved results.
+**Metric:** Recall@5 on a hand-built 12-question evaluation set.
 
 | Retrieval Method | Recall@5 |
 |---|---|
@@ -154,23 +150,14 @@ Rather than assuming hybrid retrieval and reranking improve performance, Filings
 | Hybrid — BM25 + Vector + RRF | 66.67% (8/12) |
 | **Hybrid + Cross-Encoder Reranking** | **75.00% (9/12)** |
 
-Hybrid retrieval improved Recall@5 by 8.34 percentage points over vector-only retrieval. Adding cross-encoder reranking produced a further 8.33 percentage-point improvement.
-
-**Evaluation nuance:** reranking was not an unconditional improvement. The Goldman Sachs risk-factors question passed under hybrid retrieval but regressed after reranking. Under the final Hybrid + Reranked configuration, 9/12 questions passed and 3/12 failed:
-
-- NVIDIA — Properties
-- Goldman Sachs — Risk Factors
-- Meta — MD&A / Financial Results
-
-For NVIDIA and Meta, substantial content was confirmed to exist in the correct filing sections, indicating a retrieval/ranking limitation rather than missing source data. The Goldman Sachs result demonstrates that reranking can improve overall retrieval performance while still introducing individual regressions.
+**Evaluation nuance:** reranking is not an unconditional improvement — the Goldman Sachs risk-factors question passed under hybrid retrieval but regressed after reranking. Under the final configuration, 9/12 passed and 3/12 failed (NVIDIA Properties, Goldman Sachs Risk Factors, Meta MD&A). For NVIDIA and Meta, substantial real content was confirmed in the correct section, indicating a retrieval-ranking limitation rather than missing data.
 
 ## Companies Covered
 
-**Technology:** AAPL (Apple), MSFT (Microsoft), GOOGL (Alphabet), NVDA (NVIDIA), AMZN (Amazon), META (Meta), TSLA (Tesla), AMD
+**Technology:** AAPL, MSFT, GOOGL, NVDA, AMZN, META, TSLA, AMD
+**Financial Services:** AXP, JPM, GS, MS, BAC, C, STT
 
-**Financial Services:** AXP (American Express), JPM (JPMorgan Chase), GS (Goldman Sachs), MS (Morgan Stanley), BAC (Bank of America), C (Citigroup), STT (State Street)
-
-**15 companies.** For each, the ingestion pipeline targets 3 most recent 10-K filings + 2 most recent 10-Q filings — a target corpus of 15 × 5 = 75 filings. The ingestion pipeline is designed without company-specific parsing logic, allowing additional tickers to be added through configuration.
+15 companies, 75 filings (3×10-K + 2×10-Q each). The ingestion pipeline has no company-specific logic, so more tickers can be added through configuration alone.
 
 ## SEC Filing Pipeline
 ```
@@ -178,9 +165,6 @@ SEC EDGAR → Raw Filing Download → HTML/Primary Document
 → Structure-Aware Parsing → Section Extraction
 → Chunking → Embeddings → Pinecone
 ```
-
-
-The parser removes HTML and XBRL noise while preserving meaningful filing structure (Item 1 Business, Item 1A Risk Factors, Item 7 MD&A, Item 8 Financial Statements, etc.). Section-aware metadata is retained during chunking so retrieval can be filtered and evaluated at the filing-section level.
 
 ## Technology Stack
 
@@ -194,13 +178,25 @@ The parser removes HTML and XBRL noise while preserving meaningful filing struct
 | Embeddings | `all-MiniLM-L6-v2` | Local 384-dimensional embeddings |
 | LLM | Groq — `gpt-oss-120b` | Answer generation and grading |
 | API | FastAPI | Programmatic API access |
-| UI | Streamlit | Interactive research interface, deployed on Streamlit Community Cloud |
+| UI | Streamlit | Chat interface, deployed on Streamlit Community Cloud |
 | Data Source | SEC EDGAR | Real 10-K / 10-Q filings |
 | Language | Python 3.12 | Application and pipeline |
 
+## UI Features
+
+The deployed interface goes beyond a plain Q&A box to make the system's trustworthiness visible:
+
+- **Chat-style interface** with persistent conversation history
+- **Evidence cards** — each cited source shown with company, fiscal year, filing type, item number, and a real excerpt from the retrieved text
+- **Verification badge** — a visible supported/unsupported indicator driven by the graph's actual verification output
+- **Distinct refusal styling** — when evidence is judged insufficient, the answer renders in a clearly marked box instead of looking like a normal response
+- **Retrieval details panel** — an expandable, honest summary of the pipeline stages used and real measured response time
+- **Company focus selector** and **clickable example questions** for first-time use
+- **Streaming reveal** of the generated answer
+
 ## API
 
-FilingsIQ exposes a FastAPI interface:
+FilingsIQ also exposes a FastAPI interface:
 
 - `GET /health` — health check
 - `GET /companies` — list of available companies
@@ -212,8 +208,6 @@ Example:
   "question": "What was Apple's total net sales in fiscal year 2023?"
 }
 ```
-
-The API returns the generated answer together with retrieved sources and the citation-verification result.
 
 ## Project Structure
 ```
@@ -256,6 +250,7 @@ financial-filings-copilot/
 ```
 
 
+
 ## Local Setup
 
 **1. Clone the repository**
@@ -281,15 +276,16 @@ GROQ_API_KEY=your-groq-key
 ```
 
 
+
 Never commit `.env` or API keys to GitHub.
 
 ## Build the Corpus
 
 ```bash
-python -m app.ingestion.download      # download SEC filings
-python -m app.ingestion.parse         # parse filings
-python -m app.retrieval.chunking      # create chunks
-python -m app.retrieval.vectorstore   # generate embeddings and upload to Pinecone
+python -m app.ingestion.download
+python -m app.ingestion.parse
+python -m app.retrieval.chunking
+python -m app.retrieval.vectorstore
 ```
 
 ## Run the Application
@@ -306,38 +302,39 @@ python -m uvicorn app.api.main:app --reload --port 8000
 
 ## Deployment
 
-The app is deployed on **Streamlit Community Cloud**, with `app/ui/streamlit_app.py` as the entry point and secrets (`PINECONE_API_KEY`, `GROQ_API_KEY`, `SEC_EDGAR_EMAIL`) configured via Streamlit's built-in secrets manager.
+Live on **Streamlit Community Cloud** at https://financial-filings-copilot.streamlit.app.
 
-Two earlier platforms were evaluated and ruled out for documented reasons:
+Two earlier platforms were tried and ruled out for documented reasons:
 - **Hugging Face Spaces** — Gradio and Docker Spaces now require a paid PRO plan; only Static Spaces (which cannot run this app) are free.
-- **Render** — the free tier's 512MB memory limit was insufficient for the combined footprint of PyTorch, the embeddings model, the cross-encoder reranker, and an in-memory BM25 index over 33K+ chunks, causing the deploy to be killed with an out-of-memory error.
+- **Render** — the free tier's 512MB memory limit was insufficient for the combined footprint of PyTorch, the embeddings model, the cross-encoder reranker, and an in-memory BM25 index over 33K+ chunks, causing the deploy to be killed with an out-of-memory error. Streamlit Community Cloud's roughly 1GB free memory was sufficient.
 
 ## Design Decisions
 
-**Why hybrid retrieval?** Financial filings contain terminology where exact lexical matches matter — e.g. "internal control over financial reporting" may be better retrieved with lexical matching than pure semantic similarity. BM25 complements dense retrieval by capturing these exact terms.
+**Why hybrid retrieval?** Exact lexical matches matter for financial terminology — e.g. "internal control over financial reporting" may be better retrieved with lexical matching than pure semantic similarity.
 
-**Why rerank?** Retrieval systems are optimized for high recall, but the first-stage ranking isn't always ideal. Retrieving more candidates (20) and reranking with a cross-encoder — which evaluates the relationship between the full query and passage jointly — improves final ordering before generation.
+**Why rerank?** First-stage ranking isn't always ideal. Retrieving 20 candidates and reranking with a cross-encoder — which evaluates the full query-passage relationship jointly — improves final ordering.
 
-**Why LangGraph?** The workflow contains real conditional decisions ("is the evidence relevant?") that determine whether to generate or retry. LangGraph makes this routing explicit and keeps state across nodes, rather than hand-chaining function calls.
+**Why LangGraph?** The workflow contains real conditional decisions ("is the evidence relevant?"). LangGraph makes this routing explicit and keeps state across nodes.
 
-**Why section-aware parsing?** SEC filings are structured documents. A generic text splitter can destroy useful boundaries between Risk Factors, MD&A, Financial Statements, and Legal Proceedings. Preserving section metadata makes retrieval more meaningful and allows performance to be evaluated against expected filing sections.
+**Why section-aware parsing?** A generic text splitter can destroy useful boundaries between Risk Factors, MD&A, Financial Statements, and Legal Proceedings.
 
-**Why Streamlit over Gradio?** The app was initially built with Gradio. Deployment attempts on Hugging Face Spaces and Render each hit real platform-specific blockers (paid-plan requirements and memory limits, respectively). Streamlit Community Cloud offers free hosting with a higher memory ceiling, and porting the UI required no changes to the underlying retrieval/graph logic.
+**Why Streamlit over Gradio?** Deployment attempts on Hugging Face Spaces and Render each hit real platform-specific blockers. Streamlit Community Cloud offered free hosting with a higher memory ceiling, and porting the UI required no changes to the underlying retrieval/graph logic.
 
 ## Known Limitations
 
-1. **Claim-level citation attribution** — citation verification evaluates whether the generated answer is supported by the retrieved evidence overall; it does not guarantee exact sentence-to-citation alignment for every inline marker.
-2. **Retrieval is not perfect** — the final Hybrid + Reranked configuration achieves 75.00% Recall@5 (9/12); the 3 failing questions are retained in the evaluation rather than removed from the test set.
-3. **Reranking can introduce regressions** — the Goldman Sachs risk-factors question demonstrates that reranking is not guaranteed to improve every individual query, an important trade-off of multi-stage retrieval systems.
-4. **Filing sections may be incorporated by reference** — some filers don't contain every Part III section directly in the 10-K body, instead incorporating portions from their proxy statement. Absence of a section in the retrieved filing doesn't always mean the information doesn't exist elsewhere in the company's reporting documents.
-5. **Multi-turn contextualization** — using previous conversation history to rewrite follow-up questions is planned for a future iteration. The current validated graph focuses on Retrieve → Grade → Rewrite/Retry → Generate → Verify.
+1. **Claim-level citation attribution** — verification evaluates whether the answer is supported by the evidence overall; it doesn't guarantee exact sentence-to-citation alignment for every inline marker.
+2. **Retrieval is not perfect** — 75.00% Recall@5 (9/12); the 3 failing questions are retained in the evaluation rather than removed.
+3. **Reranking can introduce regressions** — the Goldman Sachs case demonstrates reranking isn't guaranteed to improve every individual query.
+4. **Filing sections may be incorporated by reference** — some filers don't contain every Part III section directly in the 10-K body.
+5. **Multi-turn contextualization** — using chat history to rewrite follow-up questions is planned future work; the current graph focuses on Retrieve → Grade → Rewrite/Retry → Generate → Verify per single question.
 
 ## Security
 
-API credentials are loaded through environment variables. The following should never be committed: `.env`, API keys, Pinecone credentials, Groq credentials, or any private tokens. For hosted deployments, configure credentials using the platform's secret/environment-variable management rather than storing them in source code.
+API credentials are loaded through environment variables. Never commit `.env`, API keys, or any credentials. Hosted deployments use the platform's own secrets manager.
 
 ## Roadmap
 
+### Completed
 - [x] SEC EDGAR ingestion
 - [x] Structure-aware HTML parsing
 - [x] Section-aware chunking
@@ -350,8 +347,10 @@ API credentials are loaded through environment variables. The following should n
 - [x] Cross-encoder reranking
 - [x] Citation verification
 - [x] FastAPI API
-- [x] Streamlit interface
+- [x] Streamlit chat interface with evidence cards and refusal styling
 - [x] Streamlit Community Cloud deployment
+
+### Future Work
 - [ ] Multi-turn question contextualization
 - [ ] Claim-level citation alignment
 - [ ] Expanded evaluation benchmark
@@ -359,11 +358,12 @@ API credentials are loaded through environment variables. The following should n
 
 ## What Makes This Project Different?
 
-FilingsIQ is intentionally built around measured retrieval performance and failure analysis, rather than only demonstrating that an LLM can answer questions from documents.
+Financial Filings Copilot is intentionally built around measured retrieval performance and failure analysis, rather than only demonstrating that an LLM can answer questions from documents. Every improvement — and every regression — is reported, not hidden.
 
 Baseline → Vector Retrieval → Hybrid Retrieval → Reranking → Generation → Citation Verification
 
 The goal is not to claim the system is perfect. The goal is to build a transparent, testable retrieval system where retrieval quality is measured, failures are visible, and unsupported answers are treated as a system failure rather than a successful response.
+
 
 ## License
 
@@ -372,7 +372,6 @@ MIT License
 ## Author
 
 **Vishal Kumar Singh**
-
 **IIT Madras**
 
 Built as an applied research and engineering project exploring Retrieval-Augmented Generation, Agentic AI, Information Retrieval, Financial NLP, LLM evaluation, LangGraph workflows, and evidence-grounded AI systems.
