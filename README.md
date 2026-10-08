@@ -372,6 +372,8 @@ MIT License
 ## Author
 
 **Vishal Kumar Singh**
+**Pritam Priyadarshi**
+
 **IIT Madras**
 
 Built as an applied research and engineering project exploring Retrieval-Augmented Generation, Agentic AI, Information Retrieval, Financial NLP, LLM evaluation, LangGraph workflows, and evidence-grounded AI systems.
