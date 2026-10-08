@@ -371,8 +371,7 @@ MIT License
 
 ## Author
 
-**Vishal Kumar Singh**
-**Pritam Priyadarshi**
+**Vishal Kumar Singh** **,** **Pritam Priyadarshi**
 
 **IIT Madras**
 
